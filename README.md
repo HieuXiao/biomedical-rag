@@ -1,4 +1,4 @@
-# Biomedical RAG
+# Healthcare RAG
 
 Clinical Healthcare AI RAG Mockup Project.
 
