@@ -6,23 +6,29 @@ from pathlib import Path
 import os
 
 from contextlib import asynccontextmanager
-from core.generator import initialize_default_query_engine
+from core.generator import initialize_default_pipeline
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Load the RAG engine on startup with the default API key
-    print("Khởi động RAG Engine mặc định cho API...")
-    app.state.query_engine = initialize_default_query_engine()
-    if app.state.query_engine:
-        print("✅ RAG Engine mặc định đã sẵn sàng!")
+    # Khởi động RAG pipeline mặc định với API key hệ thống.
+    print("Khởi động Medical RAG Pipeline mặc định...")
+    app.state.pipeline = initialize_default_pipeline()
+    if app.state.pipeline:
+        print("✅ Medical RAG Pipeline mặc định đã sẵn sàng!")
     else:
-        print("⚠️ Lỗi: Không thể khởi động RAG Engine mặc định. API key chưa được set (GEMINI_API_KEY hoặc GOOGLE_API_KEY).")
+        print("⚠️ Pipeline mặc định chưa sẵn sàng. API key chưa được set (GEMINI_API_KEY hoặc GOOGLE_API_KEY). "
+              "Người dùng vẫn có thể dán API key trên UI để dùng.")
     yield
-    # Clean up the models and release the resources
-    print("Dọn dẹp và tắt RAG Engine...")
-    app.state.query_engine = None
+    # Dọn dẹp tài nguyên.
+    print("Dọn dẹp và tắt RAG Pipeline...")
+    try:
+        from core.graph_store import get_graph_store
+        get_graph_store().close()
+    except Exception:
+        pass
+    app.state.pipeline = None
 
 app = FastAPI(
     title="Clinical RAG API",
