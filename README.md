@@ -1,4 +1,4 @@
-# Biomedical RAG — Clinical Medical RAG
+# Healthcare RAG
 
 Trợ lý y tế cấp lâm sàng dựa trên kiến trúc **Medical RAG nâng cao**: khử định danh
 PHI, định tuyến truy vấn, **GraphRAG** (Knowledge Graph) + **Hybrid Search**
