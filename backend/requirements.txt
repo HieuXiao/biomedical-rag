@@ -1,19 +1,35 @@
+# ===== Core API =====
 fastapi
 uvicorn
-streamlit
+python-dotenv
+pydantic
+python-multipart          # upload file (Save box)
+
+# ===== Auth & Database =====
+sqlalchemy                # ORM SQLite
+PyJWT                     # JWT token
+bcrypt                    # hash mật khẩu
+
+# ===== RAG / LlamaIndex =====
 llama-index
-# llama-index-llms-openai
-# llama-index-embeddings-openai
 llama-index-llms-google-genai
 llama-index-embeddings-gemini
-google-generativeai
-sentence-transformers
-transformers
-python-dotenv
-pdfplumber
+llama-index-embeddings-huggingface
 llama-index-readers-file
-pymupdf
+google-generativeai
 google-api-core
+
+# ===== Embeddings / Reranker =====
+sentence-transformers          # CrossEncoder cho bge-reranker-v2-m3
+transformers
+rank-bm25                      # BM25 cho Hybrid Search
+
+# ===== Knowledge Graph =====
+neo4j                          # driver kết nối Neo4j Community
+
+# ===== OCR / PDF =====
+pymupdf
+pdfplumber
 pytesseract
 pdf2image
 Pillow

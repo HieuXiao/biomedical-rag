@@ -1,28 +1,43 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import router
 from dotenv import load_dotenv
 from pathlib import Path
 import os
 
 from contextlib import asynccontextmanager
-from core.generator import initialize_default_query_engine
+from core.generator import initialize_default_pipeline
+from core.db import init_db
+
+from api.routes import router as meta_router
+from api.auth_routes import router as auth_router
+from api.chat_routes import router as chat_router
+from api.doc_routes import router as doc_router
+from api.admin_routes import router as admin_router
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Load the RAG engine on startup with the default API key
-    print("Khởi động RAG Engine mặc định cho API...")
-    app.state.query_engine = initialize_default_query_engine()
-    if app.state.query_engine:
-        print("✅ RAG Engine mặc định đã sẵn sàng!")
+    # Khởi tạo database (tạo bảng, seed admin + tài liệu gốc).
+    print("Khởi tạo database...")
+    init_db()
+    # Khởi động RAG pipeline mặc định với API key hệ thống.
+    print("Khởi động Medical RAG Pipeline mặc định...")
+    app.state.pipeline = initialize_default_pipeline()
+    if app.state.pipeline:
+        print("✅ Medical RAG Pipeline mặc định đã sẵn sàng!")
     else:
-        print("⚠️ Lỗi: Không thể khởi động RAG Engine mặc định. API key chưa được set (GEMINI_API_KEY hoặc GOOGLE_API_KEY).")
+        print("⚠️ Pipeline mặc định chưa sẵn sàng. API key chưa được set (GEMINI_API_KEY hoặc GOOGLE_API_KEY). "
+              "Người dùng vẫn có thể dán API key trên UI để dùng.")
     yield
-    # Clean up the models and release the resources
-    print("Dọn dẹp và tắt RAG Engine...")
-    app.state.query_engine = None
+    # Dọn dẹp tài nguyên.
+    print("Dọn dẹp và tắt RAG Pipeline...")
+    try:
+        from core.graph_store import get_graph_store
+        get_graph_store().close()
+    except Exception:
+        pass
+    app.state.pipeline = None
 
 app = FastAPI(
     title="Clinical RAG API",
@@ -40,7 +55,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router, prefix="/api")
+app.include_router(meta_router, prefix="/api")
+app.include_router(auth_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
+app.include_router(doc_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
