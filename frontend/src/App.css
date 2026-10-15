@@ -6,10 +6,8 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  max-width: 980px;
-  margin: 0 auto;
-  background: var(--panel);
-  box-shadow: var(--shadow);
+  width: 100%;
+  background: var(--bg);
 }
 
 /* ---------- Header ---------- */
@@ -27,8 +25,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 20px;
+  padding: 14px 24px;
   flex-wrap: wrap;
+  max-width: 1180px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
@@ -65,9 +66,10 @@
 /* ---------- Pipeline progress bar ---------- */
 .pipeline-bar {
   display: flex; gap: 6px; align-items: center;
-  padding: 8px 20px; overflow-x: auto;
+  padding: 8px 24px; overflow-x: auto;
   border-top: 1px solid var(--line-soft);
   min-height: 42px;
+  max-width: 1180px; margin: 0 auto; width: 100%;
 }
 .pipeline-bar.idle { opacity: 0; min-height: 0; padding: 0; border: 0; height: 0; }
 .pstage {
@@ -90,7 +92,7 @@
 
 /* ---------- Chat ---------- */
 .chat-container { flex: 1; overflow-y: auto; background: var(--bg); }
-.chat-inner { max-width: 820px; margin: 0 auto; padding: 24px 20px 8px; min-height: 100%; }
+.chat-inner { max-width: 960px; margin: 0 auto; padding: 28px 24px 8px; min-height: 100%; }
 
 .empty-state { text-align: center; padding: 48px 12px; color: var(--muted); }
 .empty-icon { font-size: 48px; }
@@ -115,19 +117,56 @@
 .message.bot .avatar { color: var(--brand); }
 
 .bubble {
-  max-width: 76%; padding: 14px 16px; border-radius: 16px;
+  padding: 16px 18px; border-radius: 16px;
   background: var(--panel); border: 1px solid var(--line);
   box-shadow: var(--shadow-sm);
 }
+/* Bot: dùng toàn bộ chiều rộng để đọc câu trả lời lâm sàng dài dễ hơn. */
+.message.bot .bubble { flex: 1; min-width: 0; border-bottom-left-radius: 4px; }
+/* User: bong bóng gọn bên phải. */
 .message.user .bubble {
+  max-width: 76%;
   background: var(--user-bubble); color: var(--user-ink); border-color: transparent;
   border-bottom-right-radius: 4px;
 }
-.message.bot .bubble { border-bottom-left-radius: 4px; }
 .bubble-error { border-color: var(--danger); background: var(--danger-tint); }
 
 .bubble-content p { margin: 0; white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; }
 .bubble-content .muted { color: var(--muted); }
+
+/* ---------- MarkdownLite (câu trả lời bot) ---------- */
+.md { line-height: 1.65; }
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md p { margin: 0 0 10px; white-space: normal; word-wrap: break-word; }
+.md .md-h { margin: 16px 0 8px; font-weight: 700; line-height: 1.3; color: var(--ink); }
+.md h3.md-h { font-size: 16px; }
+.md h4.md-h, .md h5.md-h, .md h6.md-h { font-size: 14.5px; }
+.md .md-list { margin: 6px 0 12px; padding-left: 22px; }
+.md .md-list li { margin: 4px 0; padding-left: 2px; }
+.md ul.md-list { list-style: none; padding-left: 6px; }
+.md ul.md-list li { position: relative; padding-left: 18px; }
+.md ul.md-list li::before {
+  content: ""; position: absolute; left: 2px; top: 0.62em;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--brand);
+}
+.md strong { font-weight: 600; color: var(--ink); }
+.md em { font-style: italic; }
+.md .md-code {
+  font-family: var(--f-mono); font-size: 0.88em; padding: 1px 5px;
+  border-radius: 5px; background: var(--panel-2); border: 1px solid var(--line);
+}
+.md .md-cite {
+  font-family: var(--f-mono); font-size: 0.72em; font-weight: 600;
+  color: var(--accent); background: var(--accent-tint);
+  padding: 1px 5px; border-radius: 6px; margin-left: 2px; vertical-align: super;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.md .md-warn {
+  margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+  background: var(--warn-tint); border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  color: var(--ink); font-size: 13px;
+}
 
 .bubble-topmeta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 
@@ -196,7 +235,7 @@
   position: sticky; bottom: 0; z-index: 20;
   padding: 14px 20px 16px; background: var(--panel); border-top: 1px solid var(--line);
 }
-.input-form { display: flex; gap: 10px; max-width: 820px; margin: 0 auto; }
+.input-form { display: flex; gap: 10px; max-width: 960px; margin: 0 auto; }
 .input-form input {
   flex: 1; height: 46px; padding: 0 18px;
   border: 1px solid var(--line); border-radius: 14px; background: var(--panel-2);
@@ -210,7 +249,7 @@
 }
 .input-form button:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
 .input-form button:disabled { opacity: .5; cursor: not-allowed; }
-.status-line { max-width: 820px; margin: 8px auto 0; font-size: 11.5px; color: var(--muted); font-family: var(--f-mono); }
+.status-line { max-width: 960px; margin: 8px auto 0; font-size: 11.5px; color: var(--muted); font-family: var(--f-mono); }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -220,7 +259,8 @@
   .brand-sub { display: none; }
   .api-key-input { width: 120px; }
   .model-selector { min-width: 130px; }
-  .bubble { max-width: 86%; }
+  .message.user .bubble { max-width: 90%; }
+  .chat-inner { padding: 20px 14px 8px; }
   .pstage-label { display: none; }
   .pstage { padding: 6px 8px; }
 }

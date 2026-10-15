@@ -89,8 +89,11 @@ def _build_context_block(nodes: List[dict]) -> str:
     return "\n\n".join(blocks)
 
 
-def _build_prompt(query: str, context_block: str, graph_text: str) -> str:
-    parts = [SYSTEM_RULES, "\n===== NGỮ CẢNH (tài liệu truy xuất) =====\n", context_block or "(trống)"]
+def _build_prompt(query: str, context_block: str, graph_text: str, profile_text: str = "") -> str:
+    parts = [SYSTEM_RULES]
+    if profile_text:
+        parts += ["\n===== HỒ SƠ NGƯỜI DÙNG (để cá nhân hoá cách trả lời) =====\n", profile_text]
+    parts += ["\n===== NGỮ CẢNH (tài liệu truy xuất) =====\n", context_block or "(trống)"]
     if graph_text:
         parts += ["\n\n===== TRI THỨC KG =====\n", graph_text]
     parts += ["\n\n===== CÂU HỎI =====\n", query, "\n\n===== TRẢ LỜI =====\n"]
@@ -113,7 +116,8 @@ class RAGPipeline:
         )
 
     # -- stage helpers ---------------------------------------------------
-    def _prepare(self, query: str) -> Dict:
+    def _prepare(self, query: str, allowed_keys=None, base_allowed: bool = True,
+                 profile_text: str = "") -> Dict:
         """Chạy các tầng trước LLM, trả về mọi dữ liệu cần để sinh câu trả lời."""
         t0 = time.perf_counter()
 
@@ -130,11 +134,13 @@ class RAGPipeline:
         # 3. Graph context
         graph_ctx = get_graph_store().query(clean_query)
 
-        # 4. Retrieve
-        retrieval = get_retriever().retrieve(clean_query)
+        # 4. Retrieve (có lọc theo quyền truy cập tài liệu của user)
+        retrieval = get_retriever().retrieve(
+            clean_query, allowed_keys=allowed_keys, base_allowed=base_allowed
+        )
         context_block = _build_context_block(retrieval.nodes)
 
-        prompt = _build_prompt(clean_query, context_block, graph_ctx.text)
+        prompt = _build_prompt(clean_query, context_block, graph_ctx.text, profile_text)
 
         return {
             "clean_query": clean_query,
@@ -229,8 +235,9 @@ class RAGPipeline:
         }
 
     # -- public: non-stream ---------------------------------------------
-    def run(self, query: str) -> Dict:
-        prep = self._prepare(query)
+    def run(self, query: str, allowed_keys=None, base_allowed: bool = True,
+            profile_text: str = "") -> Dict:
+        prep = self._prepare(query, allowed_keys, base_allowed, profile_text)
         resp = self._complete_with_retry(prep["prompt"])
         answer = str(resp).strip()
 
@@ -259,7 +266,8 @@ class RAGPipeline:
         }
 
     # -- public: stream (for SSE) ---------------------------------------
-    def stream(self, query: str) -> Iterator[Dict]:
+    def stream(self, query: str, allowed_keys=None, base_allowed: bool = True,
+               profile_text: str = "") -> Iterator[Dict]:
         """
         Yield các event dict:
           {type: 'pipeline', data: {...}}   -> metadata các tầng trước LLM
@@ -268,7 +276,7 @@ class RAGPipeline:
           {type: 'error', data: '...'}
         """
         try:
-            prep = self._prepare(query)
+            prep = self._prepare(query, allowed_keys, base_allowed, profile_text)
         except Exception as exc:
             yield {"type": "error", "data": f"Lỗi chuẩn bị ngữ cảnh: {exc}"}
             return

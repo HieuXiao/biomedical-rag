@@ -38,27 +38,32 @@ class HybridRetriever:
     def __init__(self):
         self._bm25 = None
         self._bm25_nodes: List = []
+        self._bm25_gen = -1
         self._lock = threading.Lock()
 
     # ---- BM25 ----------------------------------------------------------
     def _ensure_bm25(self):
-        if self._bm25 is not None:
+        gen = index_store.get_generation()
+        if self._bm25 is not None and self._bm25_gen == gen:
             return
         with self._lock:
-            if self._bm25 is not None:
+            gen = index_store.get_generation()
+            if self._bm25 is not None and self._bm25_gen == gen:
                 return
             try:
                 from rank_bm25 import BM25Okapi
             except Exception as exc:  # pragma: no cover
                 print(f"[Hybrid] ⚠️ Thiếu rank-bm25 ({exc}). Chỉ dùng Vector search.")
                 self._bm25 = False  # đánh dấu không khả dụng
+                self._bm25_gen = gen
                 return
 
             nodes = index_store.get_all_nodes()
             corpus = [_tokenize(n.get_content()) for n in nodes]
             self._bm25_nodes = nodes
             self._bm25 = BM25Okapi(corpus) if corpus else False
-            print(f"[Hybrid] BM25 index sẵn sàng với {len(corpus)} chunk.")
+            self._bm25_gen = gen
+            print(f"[Hybrid] BM25 index (re)build với {len(corpus)} chunk.")
 
     def _bm25_search(self, query: str, top_k: int) -> List:
         self._ensure_bm25()
@@ -85,12 +90,29 @@ class HybridRetriever:
                 fused[nid] = fused.get(nid, 0.0) + 1.0 / (k + rank + 1)
         return fused
 
+    @staticmethod
+    def _is_allowed(node, allowed_keys, base_allowed) -> bool:
+        """Node được phép nếu thuộc tài liệu user được xem, hoặc là node gốc hệ thống."""
+        if allowed_keys is None:
+            return True  # không scope (vd: chưa tích hợp auth)
+        dk = node.metadata.get("doc_key")
+        if dk is None:
+            return base_allowed       # node Vector DB gốc (phác đồ có sẵn)
+        return dk in allowed_keys
+
     # ---- Public --------------------------------------------------------
-    def retrieve(self, query: str, final_top_k: int = None) -> RetrievalResult:
+    def retrieve(self, query: str, final_top_k: int = None,
+                 allowed_keys=None, base_allowed: bool = True) -> RetrievalResult:
         final_top_k = final_top_k or config.FINAL_TOP_K
 
-        vec = self._vector_search(query, config.VECTOR_TOP_K)
-        bm25 = self._bm25_search(query, config.BM25_TOP_K)
+        # Khi có lọc theo scope, lấy pool ứng viên rộng hơn để không bị thiếu.
+        pool = max(config.VECTOR_TOP_K, 24) if allowed_keys is not None else config.VECTOR_TOP_K
+        vec = self._vector_search(query, pool)
+        bm25 = self._bm25_search(query, pool)
+
+        # Lọc theo quyền truy cập tài liệu.
+        vec = [(n, s) for (n, s) in vec if self._is_allowed(n, allowed_keys, base_allowed)]
+        bm25 = [(n, s) for (n, s) in bm25 if self._is_allowed(n, allowed_keys, base_allowed)]
 
         node_by_id = {}
         for node, _ in vec + bm25:

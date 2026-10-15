@@ -64,6 +64,34 @@
   }
 }
 
+/* Dark mode BẬT thủ công (kể cả khi hệ thống đang sáng) — fix nút đổi theme. */
+:root[data-theme="dark"] {
+  --bg: #0e141b;
+  --panel: #161e27;
+  --panel-2: #1b2531;
+  --ink: #e4e9ef;
+  --muted: #97a3b1;
+  --line: #2b3745;
+  --line-soft: #222d3a;
+
+  --brand: #4cc9ae;
+  --brand-ink: #7fe0cb;
+  --brand-tint: #11272a;
+  --accent: #8da9f5;
+  --accent-tint: #18213a;
+  --danger: #f2837b;
+  --danger-tint: #2a1a1c;
+  --warn: #e9c46a;
+  --warn-tint: #2a2416;
+
+  --user-bubble: #3a63c7;
+  --user-ink: #ffffff;
+
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
+}
+
 * { box-sizing: border-box; }
 
 html, body {

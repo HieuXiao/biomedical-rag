@@ -21,6 +21,7 @@ from core import config
 _embed_model = None
 _index = None
 _nodes_cache: List = []
+_generation = 0  # tăng mỗi khi tập node thay đổi (để BM25 build lại)
 # RLock (reentrant) vì get_index() giữ lock rồi gọi get_embed_model()/get_all_nodes()
 # vốn cũng cần lock — dùng Lock thường sẽ tự khoá chính mình (deadlock).
 _lock = threading.RLock()
@@ -76,3 +77,49 @@ def get_all_nodes() -> List:
         docstore = index.storage_context.docstore
         _nodes_cache = list(docstore.docs.values())
     return _nodes_cache
+
+
+def get_generation() -> int:
+    return _generation
+
+
+def invalidate_nodes_cache():
+    """Xoá cache node (gọi sau khi thêm/xoá tài liệu để BM25 build lại)."""
+    global _nodes_cache, _generation
+    _nodes_cache = []
+    _generation += 1
+
+
+def add_nodes(nodes: List, persist: bool = True):
+    """Chèn thêm node vào index (dùng khi user upload tài liệu) và lưu đĩa."""
+    if not nodes:
+        return
+    with _lock:
+        index = get_index()
+        index.insert_nodes(nodes)
+        if persist:
+            vector_dir = resolve_vector_store_dir()
+            index.storage_context.persist(persist_dir=str(vector_dir))
+        invalidate_nodes_cache()
+
+
+def delete_nodes_by_doc_key(doc_key: str, persist: bool = True):
+    """Xoá mọi node thuộc 1 tài liệu (theo metadata doc_key)."""
+    with _lock:
+        index = get_index()
+        docstore = index.storage_context.docstore
+        target_ids = [nid for nid, n in docstore.docs.items()
+                      if n.metadata.get("doc_key") == doc_key]
+        for nid in target_ids:
+            try:
+                index.delete_nodes([nid])
+            except Exception:
+                try:
+                    docstore.delete_document(nid)
+                except Exception:
+                    pass
+        if persist and target_ids:
+            vector_dir = resolve_vector_store_dir()
+            index.storage_context.persist(persist_dir=str(vector_dir))
+        invalidate_nodes_cache()
+        return len(target_ids)

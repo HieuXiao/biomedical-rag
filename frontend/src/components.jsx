@@ -1,5 +1,81 @@
 import { useState } from 'react';
 
+/* ============================================================
+   MarkdownLite — render markdown cơ bản an toàn (không dùng
+   dangerouslySetInnerHTML): **đậm**, *nghiêng*, `code`, bullet,
+   số thứ tự, tiêu đề #, và highlight trích dẫn [n], [KG].
+   ============================================================ */
+const INLINE_RE = /\*\*(.+?)\*\*|`([^`]+)`|\[((?:\d+|KG)(?:\s*,\s*(?:\d+|KG))*)\]|\*(.+?)\*/g;
+
+function parseInline(text, keyBase) {
+  const nodes = [];
+  let last = 0;
+  let m;
+  let i = 0;
+  INLINE_RE.lastIndex = 0;
+  while ((m = INLINE_RE.exec(text)) !== null) {
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    const key = `${keyBase}-${i++}`;
+    if (m[1] !== undefined) nodes.push(<strong key={key}>{m[1]}</strong>);
+    else if (m[2] !== undefined) nodes.push(<code key={key} className="md-code">{m[2]}</code>);
+    else if (m[3] !== undefined) nodes.push(<sup key={key} className="md-cite">[{m[3].replace(/\s+/g, '')}]</sup>);
+    else if (m[4] !== undefined) nodes.push(<em key={key}>{m[4]}</em>);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
+}
+
+function toBlocks(text) {
+  const lines = (text || '').split('\n');
+  const blocks = [];
+  let list = null;
+  let listOrdered = false;
+  let para = [];
+  const flushPara = () => { if (para.length) { blocks.push({ t: 'p', text: para.join(' ') }); para = []; } };
+  const flushList = () => { if (list) { blocks.push({ t: 'list', ordered: listOrdered, items: list }); list = null; } };
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/, '');
+    const b = line.match(/^\s*[-*•]\s+(.*)$/);
+    const n = line.match(/^\s*\d+[.)]\s+(.*)$/);
+    const h = line.match(/^\s*(#{1,4})\s+(.*)$/);
+    if (b) { flushPara(); if (!list || listOrdered) { flushList(); list = []; listOrdered = false; } list.push(b[1]); }
+    else if (n) { flushPara(); if (!list || !listOrdered) { flushList(); list = []; listOrdered = true; } list.push(n[1]); }
+    else if (h) { flushPara(); flushList(); blocks.push({ t: 'h', level: h[1].length, text: h[2] }); }
+    else if (line.trim() === '') { flushPara(); flushList(); }
+    else { flushList(); para.push(line); }
+  }
+  flushPara(); flushList();
+  return blocks;
+}
+
+export function MarkdownLite({ text }) {
+  const blocks = toBlocks(text);
+  return (
+    <div className="md">
+      {blocks.map((blk, i) => {
+        if (blk.t === 'p') {
+          const warn = blk.text.trim().startsWith('⚠️');
+          return <p key={i} className={warn ? 'md-warn' : undefined}>{parseInline(blk.text, `p${i}`)}</p>;
+        }
+        if (blk.t === 'h') {
+          const Tag = `h${Math.min(blk.level + 2, 6)}`;
+          return <Tag key={i} className="md-h">{parseInline(blk.text, `h${i}`)}</Tag>;
+        }
+        if (blk.t === 'list') {
+          const Tag = blk.ordered ? 'ol' : 'ul';
+          return (
+            <Tag key={i} className="md-list">
+              {blk.items.map((it, j) => <li key={j}>{parseInline(it, `l${i}-${j}`)}</li>)}
+            </Tag>
+          );
+        }
+        return null;
+      })}
+    </div>
+  );
+}
+
 const STAGE_META = {
   deid: { label: 'Khử định danh', icon: '🔐' },
   route: { label: 'Định tuyến', icon: '🧭' },

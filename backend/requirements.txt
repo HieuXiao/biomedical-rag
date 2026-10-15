@@ -3,6 +3,12 @@ fastapi
 uvicorn
 python-dotenv
 pydantic
+python-multipart          # upload file (Save box)
+
+# ===== Auth & Database =====
+sqlalchemy                # ORM SQLite
+PyJWT                     # JWT token
+bcrypt                    # hash mật khẩu
 
 # ===== RAG / LlamaIndex =====
 llama-index

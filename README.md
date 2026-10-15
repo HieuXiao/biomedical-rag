@@ -117,6 +117,15 @@ npm run dev
 
 UI theo URL Vite in ra (thường `http://127.0.0.1:5173`).
 
+## Web app (Auth, Lịch sử, Save box, Admin, Profile)
+
+- **Đăng nhập/Đăng ký** (JWT + bcrypt). Admin mặc định: `admin@medrag.local` / `admin123` (đổi ngay trong `.env`).
+- **Lịch sử chat theo account** (SQLite) + **left sidebar** liệt kê hội thoại.
+- **Save box**: user upload tài liệu riêng (PDF/TXT/MD) → embed vào RAG, bật/tắt từng tài liệu; truy xuất chỉ dùng tài liệu hệ thống + tài liệu riêng đang bật (cô lập theo user).
+- **Admin**: quản lý tài liệu gốc hệ thống (thêm/bật/tắt/xoá), danh sách người dùng, dashboard hoạt động (số liệu, log, bám nguồn TB).
+- **Profile**: hồ sơ (chuyên khoa, yêu cầu riêng) được chèn vào prompt để cá nhân hoá.
+- DB: `backend/data/app.db` (tự tạo). Endpoint auth cần header `Authorization: Bearer <token>`.
+
 ## API
 
 | Method | Endpoint | Mô tả |
